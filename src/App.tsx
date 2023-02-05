@@ -1,3 +1,4 @@
+import React from "react";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import MenuIcon from "@mui/icons-material/Menu";
 import MuiAppBar from "@mui/material/AppBar";
@@ -24,14 +25,15 @@ import { mainListItems } from "./components/listItems";
 import { db, SignInScreen } from "./utils/firebase";
 import { emptyEntry } from "./utils/mutations";
 import { Toaster } from "react-hot-toast";
+import { Entry } from "./types/Entry";
 
 // MUI styling constants
 
 const drawerWidth = 240;
 
-const AppBar = styled(MuiAppBar, {
+const AppBar: any = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== "open",
-})(({ theme, open }) => ({
+})(({ theme, open }: any) => ({
   zIndex: theme.zIndex.drawer + 1,
   transition: theme.transitions.create(["width", "margin"], {
     easing: theme.transitions.easing.sharp,
@@ -81,7 +83,9 @@ export default function App() {
   // User authentication functionality. Would not recommend changing.
 
   const [isSignedIn, setIsSignedIn] = useState(false); // Local signed-in state.
-  const [currentUser, setcurrentUser] = useState(null); // Local user info
+  const [currentUser, setcurrentUser] = useState<firebase.User | undefined>(
+    undefined
+  ); // Local user info
 
   // Listen to the Firebase Auth state and set the local state.
   useEffect(() => {
@@ -106,7 +110,7 @@ export default function App() {
   // Data fetching from DB. Would not recommend changing.
   // Reference video for snapshot functionality https://www.youtube.com/watch?v=ig91zc-ERSE
 
-  const [entries, setEntries] = useState([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
 
   useEffect(() => {
     // ! Database query filters entries for current user. DO NOT CHANGE, editing this query may cause it to fail.
@@ -121,7 +125,9 @@ export default function App() {
     onSnapshot(q, (snapshot) => {
       // Set Entries state variable to the current snapshot
       // For each entry, appends the document ID as an object property along with the existing document data
-      setEntries(snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+      setEntries(
+        snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id })) as Entry[]
+      );
     });
   }, [currentUser]);
 

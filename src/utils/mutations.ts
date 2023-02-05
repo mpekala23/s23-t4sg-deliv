@@ -5,11 +5,12 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
+import { Entry, NewEntry } from "../types/Entry";
 import { db } from "./firebase";
 
 // Functions for database mutations
 
-export const emptyEntry = {
+export const emptyEntry: NewEntry = {
   name: "",
   link: "",
   description: "",
@@ -17,7 +18,7 @@ export const emptyEntry = {
   category: 0,
 };
 
-export async function addEntry(entry) {
+export async function addEntry(entry: NewEntry) {
   await addDoc(collection(db, "entries"), {
     name: entry.name,
     link: entry.link,
@@ -30,7 +31,7 @@ export async function addEntry(entry) {
   });
 }
 
-export async function updateEntry(entry) {
+export async function updateEntry(entry: Entry) {
   const entryRef = doc(db, "entries", entry.id);
   await updateDoc(entryRef, {
     name: entry.name,
@@ -42,7 +43,7 @@ export async function updateEntry(entry) {
   });
 }
 
-export async function deleteEntry(entry) {
+export async function deleteEntry(entry: Entry) {
   const docRef = doc(db, "entries", entry.id);
   await deleteDoc(docRef);
 }

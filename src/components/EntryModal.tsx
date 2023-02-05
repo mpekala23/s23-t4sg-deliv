@@ -13,8 +13,11 @@ import TextField from "@mui/material/TextField";
 import * as React from "react";
 import { useState } from "react";
 import { categories } from "../utils/categories";
-import { addEntry, updateEntry } from "../utils/mutations";
+import { addEntry, deleteEntry, updateEntry } from "../utils/mutations";
 import toast from "react-hot-toast";
+import { Entry, NewEntry } from "../types/Entry";
+import firebase from "firebase/compat/app";
+import { CategoryId } from "../types/Category";
 
 // Modal component for individual entries.
 
@@ -25,7 +28,21 @@ type: Type of entry modal being opened.
    "edit" (for opening or editing an existing entry from table).
 user: User making query (The current logged in user). */
 
-export default function EntryModal({ entry, type, user }) {
+interface AddProps {
+  entry: NewEntry;
+  type: "add";
+  user?: firebase.User;
+}
+
+interface EditProps {
+  entry: Entry;
+  type: "edit";
+  user?: firebase.User;
+}
+
+type Props = AddProps | EditProps;
+
+export default function EntryModal({ entry, type, user }: Props) {
   // State variables for modal status
 
   const [open, setOpen] = useState(false);
@@ -33,6 +50,7 @@ export default function EntryModal({ entry, type, user }) {
   const [link, setLink] = useState(entry.link);
   const [description, setDescription] = useState(entry.description);
   const [category, setCategory] = useState(entry.category);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   // Modal visibility handlers
 
@@ -46,6 +64,10 @@ export default function EntryModal({ entry, type, user }) {
 
   const handleClose = () => {
     setOpen(false);
+  };
+
+  const handleConfirmClose = () => {
+    setIsConfirmOpen(false);
   };
 
   // Mutation handlers
@@ -66,6 +88,9 @@ export default function EntryModal({ entry, type, user }) {
 
   const handleEdit = async () => {
     try {
+      if (!entry.userid || type === "add") {
+        throw Error("Misformatted entry");
+      }
       await updateEntry({
         name,
         link,
@@ -82,7 +107,23 @@ export default function EntryModal({ entry, type, user }) {
     }
   };
 
-  // TODO: Add Delete Mutation Handler
+  const handleDelete = async () => {
+    handleConfirmClose();
+    try {
+      if (!entry.userid || type === "add") {
+        throw Error("Misformatted entry");
+      }
+      await deleteEntry(entry);
+      handleClose();
+      toast.success("Entry deleted!");
+    } catch (e) {
+      toast.error("Failed to delete entry. Sorry! Try again :)");
+    }
+  };
+
+  const promptDelete = () => {
+    setIsConfirmOpen(true);
+  };
 
   // Button handlers for modal opening and inside-modal actions.
   // These buttons are displayed conditionally based on if adding or editing/opening.
@@ -102,27 +143,42 @@ export default function EntryModal({ entry, type, user }) {
   const actionButtons =
     type === "edit" ? (
       <DialogActions>
-        <Button onClick={handleClose}>Cancel</Button>
         <Button variant="contained" onClick={handleEdit}>
           Edit Entry
         </Button>
+        <Button variant="contained" color="error" onClick={promptDelete}>
+          Delete Entry
+        </Button>
+        <Button onClick={handleClose}>Cancel</Button>
       </DialogActions>
     ) : type === "add" ? (
       <DialogActions>
-        <Button onClick={handleClose}>Cancel</Button>
         <Button variant="contained" onClick={handleAdd}>
           Add Entry
         </Button>
+        <Button onClick={handleClose}>Cancel</Button>
       </DialogActions>
     ) : null;
 
   return (
     <div>
       {openButton}
+      <Dialog open={isConfirmOpen} onClose={handleConfirmClose}>
+        <DialogTitle>Are you sure?</DialogTitle>
+        <DialogContent>
+          This action is{" "}
+          <span style={{ fontWeight: "bolder" }}>irreversible</span>.
+        </DialogContent>
+        <DialogActions>
+          <Button variant="contained" onClick={handleDelete}>
+            Yes, delete
+          </Button>
+          <Button onClick={handleConfirmClose}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle>{type === "edit" ? name : "Add Entry"}</DialogTitle>
         <DialogContent>
-          {/* TODO: Feel free to change the properties of these components to implement editing functionality. The InputProps props class for these MUI components allows you to change their traditional CSS properties. */}
           <TextField
             margin="normal"
             id="name"
@@ -161,7 +217,9 @@ export default function EntryModal({ entry, type, user }) {
               id="demo-simple-select"
               value={category}
               label="Category"
-              onChange={(event) => setCategory(event.target.value)}
+              onChange={(event) =>
+                setCategory(event.target.value as unknown as CategoryId)
+              }
             >
               {categories.map((category) => (
                 <MenuItem value={category.id}>{category.name}</MenuItem>
